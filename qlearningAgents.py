@@ -20,6 +20,7 @@ import numpy as np
 from collections import defaultdict
 
 import random,util,math
+# from pacman import GameState
 
 class QLearningAgent(ReinforcementAgent):
     """
@@ -44,13 +45,17 @@ class QLearningAgent(ReinforcementAgent):
     def __init__(self, **args):
         "You can initialize Q-values here..."
         ReinforcementAgent.__init__(self, **args)
-        self._min_val = -1000.0
-        self.Q = defaultdict(lambda:self._min_val)
+        self._default_val = 1000.0
+        self.Q = defaultdict(lambda:self._default_val)
         self.epsilon = float(args['epsilon'])
         self.alpha = float(args['alpha'])
         self.gamma = float(args['gamma'])
         self._step = 0
-
+    def getQRelevantState(state):
+        # return tuple(state.data.agentStates)
+        data = state.data.deepCopy()
+        data.score=0.0
+        return data
     def getQValue(self, state, action):
         """
           Returns Q(state,action)
@@ -58,7 +63,16 @@ class QLearningAgent(ReinforcementAgent):
           or the Q node value otherwise
         """
         "*** YOUR CODE HERE ***"
-        return self.Q((state,action))
+        return self.Q[(QLearningAgent.getQRelevantState(state),action)]
+
+    def setQValue(self,state, action, q_value):
+        """
+          Returns None
+          Update new Q value for the state action pair
+        """
+        "*** YOUR CODE HERE ***"
+        self.Q[(QLearningAgent.getQRelevantState(state),action)] = q_value
+    
     def computeValueFromQValues(self, state):
         """
           Returns max_action Q(state,action)
@@ -71,8 +85,9 @@ class QLearningAgent(ReinforcementAgent):
         # check if terminal state
         if not actions:
           return 0.0
-        list_of_state_action_vals = [self.Q[(s,a)] for (s,a) in self.Q.keys() if s == state]
-        return self._min_val if not list_of_state_action_vals else max(list_of_state_action_vals)
+        relevant_state = QLearningAgent.getQRelevantState(state)
+        list_of_state_action_vals = [self.getQValue(state,a) for (s,a) in self.Q.keys() if s == relevant_state]
+        return self._default_val if not list_of_state_action_vals else max(list_of_state_action_vals)
 
     def computeActionFromQValues(self, state):
         """
@@ -86,7 +101,8 @@ class QLearningAgent(ReinforcementAgent):
         if not actions:
           return None
         best_val = self.computeValueFromQValues(state)
-        list_of_best_actions = [a for (s,a) in self.Q.keys() if s == state and self.Q[(s,a)] == best_val]
+        relevant_state = QLearningAgent.getQRelevantState(state)
+        list_of_best_actions = [a for (s,a) in self.Q.keys() if s == relevant_state and self.getQValue(state,a) == best_val]
         assert not list_of_best_actions or list_of_best_actions[0] in actions
         return None if not list_of_best_actions else random.choice(list_of_best_actions)
 
@@ -104,8 +120,13 @@ class QLearningAgent(ReinforcementAgent):
         # Pick Action
         "*** YOUR CODE HERE ***"
         self._step += 1
-        if(self._step % 20 == 0 and self.Q.values()):
-          print(f'step {self._step}, max Q value', max(list(self.Q.values())))
+        if(self._step % 1000 == 0 and self.Q.values()):
+          # print(f'step {self._step}, min Q value', min(list(self.Q.values())))
+          # print(self.Q.values())
+          print("step", self._step)
+          print("Q table size",len(list(self.Q.values())))
+          print("Q table seen tates", len([v for v in self.Q.values() if v < 1000.0]))
+          
         actions = self.getLegalActions(state)
         # check if terminal state
         if not actions:
@@ -133,7 +154,13 @@ class QLearningAgent(ReinforcementAgent):
         """
         "*** YOUR CODE HERE ***"
         next_state_max_val = self.computeValueFromQValues(nextState)
-        self.Q[(state,action)] = self.Q[(state,action)] + self.alpha * (reward +  self.gamma*next_state_max_val - self.Q[(state,action)])
+        s = state.data.agentStates
+        # self.Q[(state,action)] = self.Q[(state,action)] + self.alpha * (reward +  self.gamma*next_state_max_val - self.Q[(state,action)])
+        Q_sa = self.getQValue(state,action)
+        Q_sa += self.alpha * (reward +  self.gamma*next_state_max_val - Q_sa)
+        Q_sa = float(int(Q_sa * 100))/100.0
+        self.setQValue(state,action,Q_sa)
+
         # print(f'update state {state}, action {action}, nextState {nextState}, reward {reward}')
         # print('Q table')
         # print(self.Q)
