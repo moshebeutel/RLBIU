@@ -45,7 +45,7 @@ class QLearningAgent(ReinforcementAgent):
     def __init__(self, **args):
         "You can initialize Q-values here..."
         ReinforcementAgent.__init__(self, **args)
-        self._default_val = 1000.0
+        self._default_val = 500.0
         self.Q = defaultdict(lambda:self._default_val)
         self.epsilon = float(args['epsilon'])
         self.alpha = float(args['alpha'])
@@ -54,8 +54,11 @@ class QLearningAgent(ReinforcementAgent):
     def getQRelevantState(state):
         # return tuple(state.data.agentStates)
         data = state.data.deepCopy()
+        for a in data.agentStates:
+            a.configuration = Configuration(a.configuration.getPosition(), Directions.STOP )
         data.score=0.0
         return data
+        # return state
     def getQValue(self, state, action):
         """
           Returns Q(state,action)
@@ -84,9 +87,9 @@ class QLearningAgent(ReinforcementAgent):
         actions = self.getLegalActions(state)
         # check if terminal state
         if not actions:
-          return 0.0
-        relevant_state = QLearningAgent.getQRelevantState(state)
-        list_of_state_action_vals = [self.getQValue(state,a) for (s,a) in self.Q.keys() if s == relevant_state]
+          return self._default_val
+        # list all q values for current state's actions - this implicitly initilizes unseen state-actions
+        list_of_state_action_vals = [self.getQValue(state,a) for a in actions]
         return self._default_val if not list_of_state_action_vals else max(list_of_state_action_vals)
 
     def computeActionFromQValues(self, state):
@@ -101,10 +104,10 @@ class QLearningAgent(ReinforcementAgent):
         if not actions:
           return None
         best_val = self.computeValueFromQValues(state)
-        relevant_state = QLearningAgent.getQRelevantState(state)
-        list_of_best_actions = [a for (s,a) in self.Q.keys() if s == relevant_state and self.getQValue(state,a) == best_val]
-        assert not list_of_best_actions or list_of_best_actions[0] in actions
-        return None if not list_of_best_actions else random.choice(list_of_best_actions)
+        list_of_best_actions = [a for a in actions if self.getQValue(state,a) == best_val]
+        assert list_of_best_actions 
+        assert all([a in actions for a in list_of_best_actions])
+        return random.choice(list_of_best_actions)
 
     def getAction(self, state):
         """
@@ -125,7 +128,7 @@ class QLearningAgent(ReinforcementAgent):
           # print(self.Q.values())
           print("step", self._step)
           print("Q table size",len(list(self.Q.values())))
-          print("Q table seen tates", len([v for v in self.Q.values() if v < 1000.0]))
+          print("Q table seen state-action pairs", len([q for q in self.Q.values() if q < self._default_val]))
           
         actions = self.getLegalActions(state)
         # check if terminal state
@@ -160,11 +163,6 @@ class QLearningAgent(ReinforcementAgent):
         Q_sa += self.alpha * (reward +  self.gamma*next_state_max_val - Q_sa)
         Q_sa = float(int(Q_sa * 100))/100.0
         self.setQValue(state,action,Q_sa)
-
-        # print(f'update state {state}, action {action}, nextState {nextState}, reward {reward}')
-        # print('Q table')
-        # print(self.Q)
-        # print(max(list(self.Q.values())))
 
     def getPolicy(self, state):
         return self.computeActionFromQValues(state)

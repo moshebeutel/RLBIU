@@ -520,6 +520,10 @@ def readCommand( argv ):
                       help='Turns on exception handling and timeouts during games', default=False)
     parser.add_option('--timeout', dest='timeout', type='int',
                       help=default('Maximum length of time an agent can spend computing in a single game'), default=30)
+                      
+    parser.add_option('--numAvgPlots', dest='numAvgPlots', type='int',
+                      help=default('Number of epsiodes to average in the running average plots'), default=50)
+    
 
     options, otherjunk = parser.parse_args(argv)
     if len(otherjunk) != 0:
@@ -622,14 +626,14 @@ def replayGame( layout, actions, display ):
 
     display.finish()
 
-def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0, catchExceptions=False, timeout=30 ):
+def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0, catchExceptions=False, timeout=30, numAvgPlots = 50 ):
     #import __main__
     #__main__.__dict__['_display'] = display
     import matplotlib.pyplot as plt
     import datetime
     rules = ClassicGameRules(timeout)
     games = []
-
+    train_scores = []
     for i in range( numGames ):
         beQuiet = i < numTraining
         if beQuiet:
@@ -642,7 +646,10 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0
             rules.quiet = False
         game = rules.newGame( layout, pacman, ghosts, gameDisplay, beQuiet, catchExceptions)
         game.run()
-        if not beQuiet: games.append(game)
+        if not beQuiet:
+            games.append(game)
+        else:
+            train_scores.append(game.state.getScore())
 
         if record:
             import time, cPickle
@@ -660,9 +667,19 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0
         print('Win Rate:      %d/%d (%.2f)' % (wins.count(True), len(wins), winRate))
         print('Record:       ', ', '.join([ ['Loss', 'Win'][int(w)] for w in wins]))
         
+        avg_scores = [sum(train_scores[i-numAvgPlots:i])/numAvgPlots for i in range(numAvgPlots, numTraining)]        
+        
+        print('scores')
+        print('******')
+        print(train_scores)
+        print('avg_scores')
+        print('**********')
+        print(avg_scores)
+        
+        
         #plot
         fig = plt.figure()
-        fig.gca().plot(list(range(numTraining)),scores[:numTraining])
+        fig.gca().plot(list(range(len(avg_scores))),avg_scores)
         plt.savefig(f'./plots/train_plot {datetime.datetime.now()}.png')
 
     return games
