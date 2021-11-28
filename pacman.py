@@ -492,7 +492,7 @@ def readCommand( argv ):
                       help=default('the number of GAMES to play'), metavar='GAMES', default=3020)
     parser.add_option('-l', '--layout', dest='layout',
                       help=default('the LAYOUT_FILE from which to load the map layout'),
-                      metavar='LAYOUT_FILE', default='smallGrid')
+                      metavar='LAYOUT_FILE', default='mediumClassic')
     parser.add_option('-t', '--textGraphics', action='store_true', dest='textGraphics',
                       help='Display output as text only', default=False)
     parser.add_option('-q', '--quietTextGraphics', action='store_true', dest='quietGraphics',
@@ -634,6 +634,7 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0
     rules = ClassicGameRules(timeout)
     games = []
     train_scores = []
+    alpha, epsilon = pacman.alpha, pacman.epsilon
     for i in range( numGames ):
         beQuiet = i < numTraining
         if beQuiet:
@@ -667,20 +668,25 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0
         print('Win Rate:      %d/%d (%.2f)' % (wins.count(True), len(wins), winRate))
         print('Record:       ', ', '.join([ ['Loss', 'Win'][int(w)] for w in wins]))
         
-        avg_scores = [sum(train_scores[i-numAvgPlots:i])/numAvgPlots for i in range(numAvgPlots, numTraining)]        
-        
-        print('scores')
-        print('******')
-        print(train_scores)
-        print('avg_scores')
-        print('**********')
-        print(avg_scores)
-        
-        
+        visited_once = pacman.getNumStatesVisitedLessThan(2)
+        visited_less_than_5_times = pacman.getNumStatesVisitedLessThan(5)
+        print('********************************************************')
+        print(f'{visited_less_than_5_times} states were visited less than 5 times')
+        print(f'{visited_once} states were visited once')
+        print('********************************************************')
+
+        avg_train_scores = [sum(train_scores[i-numAvgPlots:i])/numAvgPlots for i in range(numAvgPlots, numTraining)]        
+        train_params_str = f'alpha_{alpha}_gamma_{pacman.gamma}_epsilon_{epsilon}'
         #plot
         fig = plt.figure()
-        fig.gca().plot(list(range(len(avg_scores))),avg_scores)
-        plt.savefig(f'./plots/train_plot {datetime.datetime.now()}.png')
+        fig.suptitle(f'Train rewards averaged on {numAvgPlots} episodes with {train_params_str}')
+        fig.gca().plot(list(range(len(avg_train_scores))),avg_train_scores)
+        plt.savefig(f'./plots/train_plot_{train_params_str}_{datetime.datetime.now().utcnow()}.png')
+
+        fig = plt.figure()
+        fig.suptitle(f'Test rewards after train with {train_params_str} win rate {winRate}')
+        fig.gca().plot(list(range(len(scores))), scores)
+        plt.savefig(f'./plots/test_plot_after_train_with_{train_params_str}_{datetime.datetime.now().utcnow()}.png')
 
     return games
 

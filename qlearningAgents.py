@@ -12,6 +12,7 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
+# from _typeshed import Self
 from os import stat
 from game import *
 from learningAgents import ReinforcementAgent
@@ -51,6 +52,7 @@ class QLearningAgent(ReinforcementAgent):
         self.alpha = float(args['alpha'])
         self.gamma = float(args['gamma'])
         self._step = 0
+        self._num_visits_dict = defaultdict(int)
     def getQRelevantState(state):
         # return tuple(state.data.agentStates)
         data = state.data.deepCopy()
@@ -74,7 +76,23 @@ class QLearningAgent(ReinforcementAgent):
           Update new Q value for the state action pair
         """
         "*** YOUR CODE HERE ***"
-        self.Q[(QLearningAgent.getQRelevantState(state),action)] = q_value
+        relevant_state = QLearningAgent.getQRelevantState(state)
+        self.Q[(relevant_state,action)] = q_value
+        # update num visits
+        self._num_visits_dict[relevant_state] += 1
+    
+    def getNumVisits(self, state):
+        """
+        Returns number of visits in state
+        """
+        relevant_state = QLearningAgent.getQRelevantState(state)
+        return self._num_visits_dict[relevant_state]
+    
+    def getNumStatesVisitedLessThan(self,times: int):
+        """
+        Returns number of states thaat was visited less than `times` argument
+        """
+        return len([v for v in self._num_visits_dict.values() if v < times])
     
     def computeValueFromQValues(self, state):
         """
@@ -123,12 +141,12 @@ class QLearningAgent(ReinforcementAgent):
         # Pick Action
         "*** YOUR CODE HERE ***"
         self._step += 1
-        if(self._step % 1000 == 0 and self.Q.values()):
-          # print(f'step {self._step}, min Q value', min(list(self.Q.values())))
-          # print(self.Q.values())
-          print("step", self._step)
-          print("Q table size",len(list(self.Q.values())))
-          print("Q table seen state-action pairs", len([q for q in self.Q.values() if q < self._default_val]))
+        # if(self._step % 1000 == 0 and self.Q.values()):
+        #   # print(f'step {self._step}, min Q value', min(list(self.Q.values())))
+        #   # print(self.Q.values())
+        #   print("step", self._step)
+        #   print("Q table size",len(list(self.Q.values())))
+        #   print("Q table seen state-action pairs", len([q for q in self.Q.values() if q < self._default_val]))
           
         actions = self.getLegalActions(state)
         # check if terminal state
