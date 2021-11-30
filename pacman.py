@@ -492,7 +492,7 @@ def readCommand( argv ):
                       help=default('the number of GAMES to play'), metavar='GAMES', default=3020)
     parser.add_option('-l', '--layout', dest='layout',
                       help=default('the LAYOUT_FILE from which to load the map layout'),
-                      metavar='LAYOUT_FILE', default='mediumClassic')
+                      metavar='LAYOUT_FILE', default='mediumGrid')
     parser.add_option('-t', '--textGraphics', action='store_true', dest='textGraphics',
                       help='Display output as text only', default=False)
     parser.add_option('-q', '--quietTextGraphics', action='store_true', dest='quietGraphics',
@@ -670,7 +670,9 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0
         
         visited_once = pacman.getNumStatesVisitedLessThan(2)
         visited_less_than_5_times = pacman.getNumStatesVisitedLessThan(5)
+        number_of_states = pacman.getNumStates()
         print('********************************************************')
+        print(f'{number_of_states} states in Q table')
         print(f'{visited_less_than_5_times} states were visited less than 5 times')
         print(f'{visited_once} states were visited once')
         print('********************************************************')
@@ -679,7 +681,7 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0
         train_params_str = f'alpha_{alpha}_gamma_{pacman.gamma}_epsilon_{epsilon}'
         #plot
         fig = plt.figure()
-        fig.suptitle(f'Train rewards averaged on {numAvgPlots} episodes with {train_params_str}')
+        fig.suptitle(f'Train rewards {numAvgPlots} ep. avg.{train_params_str}')
         fig.gca().plot(list(range(len(avg_train_scores))),avg_train_scores)
         plt.savefig(f'./plots/train_plot_{train_params_str}_{datetime.datetime.now().utcnow()}.png')
 

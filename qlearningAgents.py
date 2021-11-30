@@ -46,11 +46,12 @@ class QLearningAgent(ReinforcementAgent):
     def __init__(self, **args):
         "You can initialize Q-values here..."
         ReinforcementAgent.__init__(self, **args)
-        self._default_val = 500.0
+        self._default_val = 0.0
         self.Q = defaultdict(lambda:self._default_val)
         self.epsilon = float(args['epsilon'])
         self.alpha = float(args['alpha'])
         self.gamma = float(args['gamma'])
+        
         self._step = 0
         self._num_visits_dict = defaultdict(int)
     def getQRelevantState(state):
@@ -79,8 +80,12 @@ class QLearningAgent(ReinforcementAgent):
         relevant_state = QLearningAgent.getQRelevantState(state)
         self.Q[(relevant_state,action)] = q_value
         # update num visits
-        self._num_visits_dict[relevant_state] += 1
-    
+        # self._num_visits_dict[relevant_state] += 1
+    def getNumStates(self):
+        """
+        Returns number of visits in state
+        """
+        return len(list(self.Q.values()))
     def getNumVisits(self, state):
         """
         Returns number of visits in state
@@ -141,12 +146,6 @@ class QLearningAgent(ReinforcementAgent):
         # Pick Action
         "*** YOUR CODE HERE ***"
         self._step += 1
-        # if(self._step % 1000 == 0 and self.Q.values()):
-        #   # print(f'step {self._step}, min Q value', min(list(self.Q.values())))
-        #   # print(self.Q.values())
-        #   print("step", self._step)
-        #   print("Q table size",len(list(self.Q.values())))
-        #   print("Q table seen state-action pairs", len([q for q in self.Q.values() if q < self._default_val]))
           
         actions = self.getLegalActions(state)
         # check if terminal state
@@ -157,9 +156,15 @@ class QLearningAgent(ReinforcementAgent):
         if util.flipCoin(self.epsilon):
           return random.choice(actions)
         
-        actionFromQValues = self.computeActionFromQValues(state)
+        action_from_Q_values = self.computeActionFromQValues(state)
+
+        chosen_action = action_from_Q_values if action_from_Q_values is not None else random.choice(actions)
+        
+        # update num visits
+        relevant_state = QLearningAgent.getQRelevantState(state)
+        self._num_visits_dict[relevant_state] += 1
          
-        return actionFromQValues if actionFromQValues is not None else random.choice(actions)
+        return chosen_action
 
 
         
